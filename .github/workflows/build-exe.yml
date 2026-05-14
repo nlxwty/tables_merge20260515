@@ -1,78 +1,63 @@
 name: Build Windows EXE
 
-# 触发条件：可手动触发，也可在推送标签时自动触发
 on:
-  # 手动触发（推荐用于测试）
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号（如 v1.0.0）'
+        description: 'Version tag (e.g. v1.0.0)'
         required: false
         default: 'latest'
-  
-  # 推送标签时自动触发（如 git tag v1.0.0 && git push origin v1.0.0）
   push:
     tags:
       - 'v*'
 
-# 权限设置
 permissions:
-  contents: write  # 用于发布 Release
+  contents: write
 
 jobs:
   build:
-    runs-on: windows-latest  # Windows 运行环境，才能生成 exe
+    runs-on: windows-latest
     
     steps:
-      # ========== 第1步：检出代码 ==========
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # ========== 第2步：设置 Python 环境 ==========
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'  # 推荐使用 3.10 或 3.11，兼容性较好
-          cache: 'pip'            # 缓存 pip 依赖，加速构建
+          python-version: '3.11'
+          cache: 'pip'
       
-      # ========== 第3步：安装依赖 ==========
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      # ========== 第4步：运行 PyInstaller 构建 ==========
+      # ========== FIXED: Use bash shell + UTF-8 encoding ==========
       - name: Build EXE with PyInstaller
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
           python build.py
       
-      # ========== 第5步：验证构建结果 ==========
       - name: Verify build output
+        shell: bash
         run: |
           ls -la dist/
-          file dist/表格汇总工具.exe
       
-      # ========== 第6步：上传构建产物（Artifacts）==========
-      # 这样你可以在 Actions 页面直接下载 exe 测试
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 表格汇总工具-Windows
-          path: dist/表格汇总工具.exe
-          retention-days: 30  # 保留30天
+          name: tables_merge_tool
+          path: dist/*.exe
+          retention-days: 30
       
-      # ========== 第7步：创建 GitHub Release（仅标签推送时）==========
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/表格汇总工具.exe
-          generate_release_notes: true  # 自动生成 Release 说明
+          files: dist/*.exe
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      # ========== 第8步：输出下载链接（可选）==========
-      - name: Print download URL
-        run: |
-          echo "构建完成！"
-          echo "Artifacts 下载地址：https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
