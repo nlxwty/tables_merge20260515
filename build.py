@@ -1,58 +1,52 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PyInstaller 构建脚本
-用于在 GitHub Actions 中打包 tables_merge.py 为 exe
+PyInstaller build script for tables_merge.py
 """
 import PyInstaller.__main__
 import os
 import sys
+import io
+
+# Fix Windows console encoding issue in GitHub Actions
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def build():
-    # 获取项目根目录
     root = os.path.dirname(os.path.abspath(__file__))
-    
-    # 主脚本路径
     main_script = os.path.join(root, "tables_merge.py")
-    
-    # 图标路径（如果存在）
     icon_path = os.path.join(root, "tables_merge.png")
-    icon_arg = f"--icon={icon_path}" if os.path.exists(icon_path) else ""
     
-    # 构建参数
+    # Build arguments
     args = [
         main_script,
-        "--onefile",           # 打包为单个 exe 文件
-        "--windowed",          # 不显示控制台窗口（GUI程序）
-        "--name=表格汇总工具",  # 输出文件名
-        "--clean",             # 清理临时文件
-        "--noconfirm",         # 不询问确认
-        # 隐藏导入（tkinter 相关）
+        "--onefile",
+        "--windowed",
+        "--name=tables_merge_tool",
+        "--clean",
+        "--noconfirm",
         "--hidden-import=tkinter",
         "--hidden-import=tkinter.filedialog",
         "--hidden-import=tkinter.messagebox",
         "--hidden-import=tkinter.scrolledtext",
-        # pandas/numpy 相关隐藏导入
         "--hidden-import=pandas",
         "--hidden-import=numpy",
         "--hidden-import=openpyxl",
         "--hidden-import=xlrd",
-        # 收集所有数据文件
         "--collect-all=pandas",
         "--collect-all=openpyxl",
     ]
     
-    # 如果有图标，添加图标参数
-    if icon_arg:
-        args.append(icon_arg)
-    
-    # 添加资源文件（如果有图标）
+    # Add icon if exists
     if os.path.exists(icon_path):
-        args.append(f"--add-data={icon_path};.")  # Windows 用 ; 分隔
+        args.append(f"--icon={icon_path}")
+        args.append(f"--add-data={icon_path};.")
     
-    print(f"构建参数: {args}")
+    # Use ASCII-only print to avoid encoding issues
+    print("Build args:", args)
     PyInstaller.__main__.run(args)
-    print("构建完成！")
+    print("Build completed!")
 
 if __name__ == "__main__":
     build()
